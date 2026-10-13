@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6b2a">
+<title>Feldmarker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="head">
+  <div class="kit">Pabst Precision Farming Kit</div>
+  <div class="headrow">
+    <h1>Feldmarker</h1>
+    <span class="sync" id="state">Bereit</span>
+  </div>
+</header>
+
+<main class="wrap phone">
+  <div class="warn" id="https" hidden>
+    GPS und Drücker gehen nur über eine sichere Verbindung. Öffne die Seite über ihre <b>https://</b>-Adresse.
+  </div>
+
+  <section class="gps" aria-live="polite">
+    <div class="lamp" id="lamp">…</div>
+    <div class="acc" id="acc">– <small>warte auf GPS</small></div>
+    <div class="coord" id="coord">Standortfreigabe erlauben</div>
+    <div class="meta"><span id="press">Drücker: noch keine Taste</span><span id="age"></span></div>
+  </section>
+
+  <section class="btns">
+    <button class="mk maus" id="b1" data-cat="0"><span><span class="name">Maus</span><span class="key">Taste 1</span></span><span class="count" id="c0">0</span></button>
+    <button class="mk unkraut" id="b2" data-cat="1"><span><span class="name">Unkraut</span><span class="key">Taste 2</span></span><span class="count" id="c1">0</span></button>
+    <button class="mk sonst" id="b3" data-cat="2"><span><span class="name">Sonstiges</span><span class="key">Taste 3</span></span><span class="count" id="c2">0</span></button>
+  </section>
+
+  <div class="row">
+    <button class="sec" id="ble">Drücker verbinden</button>
+    <button class="sec" id="undo">Letzten Punkt löschen</button>
+  </div>
+  <div class="row">
+    <button class="sec" id="close">Feld abschließen</button>
+  </div>
+
+  <section class="panel" id="closePanel" hidden>
+    <h2>Feld abschließen <span id="closeSum"></span></h2>
+    <div class="body">
+      <label for="fieldName">Feldname (optional)
+        <input id="fieldName" type="text" maxlength="60" placeholder="z. B. Hofacker" autocomplete="off">
+      </label>
+      <div class="row">
+        <button class="sec primary" id="closeShare">Abschließen &amp; exportieren</button>
+        <button class="sec" id="closeOnly">Nur abschließen</button>
+      </div>
+      <div class="row">
+        <button class="sec" id="closeCancel">Abbrechen</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2><span id="mapTitle" style="font:inherit;color:inherit">Aktuelles Feld</span> <span id="total">0 Punkte</span></h2>
+    <div id="map" class="map"></div>
+    <div class="legend"><span><i class="lg-maus"></i>Maus</span><span><i class="lg-unkraut"></i>Unkraut</span><span><i class="lg-sonst"></i>Sonstiges</span><span><i class="lg-me"></i>Du</span></div>
+    <div class="note" id="viewNote" hidden><button class="sec" id="viewBack">Zurück zum aktuellen Feld</button></div>
+  </section>
+
+  <section class="panel">
+    <h2>Letzte Punkte</h2>
+    <ul id="list"></ul>
+  </section>
+
+  <section class="panel">
+    <h2>Abgeschlossene Felder
+      <label style="flex-direction:row;display:flex;align-items:center;gap:6px">Format
+        <select id="fmt" style="min-height:32px">
+          <option value="shp">Shapefile</option>
+          <option value="csv">CSV (Excel)</option>
+          <option value="geojson">GeoJSON</option>
+        </select>
+      </label>
+    </h2>
+    <ul class="fields" id="fields"></ul>
+    <p class="note">Alle Daten liegen nur auf diesem Handy. Exportiere jedes Feld, bevor du es löschst oder die Browserdaten leerst.</p>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="export.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
