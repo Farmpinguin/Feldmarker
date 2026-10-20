@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <header class="head">
@@ -34,7 +34,7 @@
   <section class="btns">
     <button class="mk maus" id="b1" data-cat="0"><span><span class="name">Maus</span><span class="key">Taste 1</span></span><span class="count" id="c0">0</span></button>
     <button class="mk unkraut" id="b2" data-cat="1"><span><span class="name">Unkraut</span><span class="key">Taste 2</span></span><span class="count" id="c1">0</span></button>
-    <button class="mk sonst" id="b3" data-cat="2"><span><span class="name">Sonstiges</span><span class="key">Taste 3</span></span><span class="count" id="c2">0</span></button>
+    <button class="mk sonst" id="b3" data-cat="2"><span><span class="name">Grenzstein</span><span class="key">Taste 3</span></span><span class="count" id="c2">0</span></button>
   </section>
 
   <div class="row">
@@ -65,7 +65,7 @@
   <section class="panel">
     <h2><span id="mapTitle" style="font:inherit;color:inherit">Aktuelles Feld</span> <span id="total">0 Punkte</span></h2>
     <div id="map" class="map"></div>
-    <div class="legend"><span><i class="lg-maus"></i>Maus</span><span><i class="lg-unkraut"></i>Unkraut</span><span><i class="lg-sonst"></i>Sonstiges</span><span><i class="lg-me"></i>Du</span></div>
+    <div class="legend"><span><i class="lg-maus"></i>Maus</span><span><i class="lg-unkraut"></i>Unkraut</span><span><i class="lg-sonst"></i>Grenzstein</span><span><i class="lg-me"></i>Du</span></div>
     <div class="note" id="viewNote" hidden><button class="sec" id="viewBack">Zurück zum aktuellen Feld</button></div>
   </section>
 
@@ -91,7 +91,7 @@
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="export.js"></script>
-<script src="app.js"></script>
+<script src="export.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

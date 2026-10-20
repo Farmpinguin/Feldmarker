@@ -149,7 +149,7 @@
   }
 
   // ---------------------------------------------------------- Komfort
-  const KAT = ['Maus', 'Unkraut', 'Sonstiges'];
+  const KAT = ['Maus', 'Unkraut', 'Grenzstein'];
   const pad = n => String(n).padStart(2, '0');
   function lokal(ms) {
     const d = new Date(ms);

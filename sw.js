@@ -1,14 +1,20 @@
-// Feldmarker (nur Handy) – Service Worker: App läuft nach dem ersten Öffnen komplett offline.
-// Bei einer neuen Version die Nummer erhöhen.
-const CACHE = 'feldmarker-handy-v2';
+// Feldmarker (nur Handy) – Service Worker
+// Mit Netz: immer die neueste Version von GitHub holen (am Browser-Cache vorbei).
+// Ohne Netz: aus dem eigenen Speicher – die App läuft dann komplett offline.
+const CACHE = 'feldmarker-handy-v4';
 const FILES = [
-  './', 'index.html', 'style.css', 'app.js', 'export.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
+  './', 'index.html', 'style.css', 'app.js', 'export.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'
+];
+const LIBS = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => Promise.all(FILES.map(u => c.add(u).catch(() => {})))));
+  e.waitUntil(caches.open(CACHE).then(c => Promise.all([
+    ...FILES.map(u => fetch(u, { cache: 'reload' }).then(r => r.ok && c.put(u, r)).catch(() => {})),
+    ...LIBS.map(u => c.add(u).catch(() => {}))
+  ])));
   self.skipWaiting();
 });
 
@@ -18,15 +24,27 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
-// Aus dem Cache antworten, im Hintergrund aktualisieren. Luftbild-Kacheln nicht cachen.
+function timeout(ms) { return new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)); }
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || req.url.includes('arcgisonline')) return;
+  const url = new URL(req.url);
+
+  if (url.origin !== self.location.origin) {        // Leaflet: Speicher zuerst
+    e.respondWith(caches.match(req).then(hit => hit || fetch(req)));
+    return;
+  }
+
+  // eigene Dateien: Netz zuerst (max. 3 s), sonst Speicher
   e.respondWith(caches.open(CACHE).then(async c => {
-    const hit = await c.match(req, { ignoreSearch: true });
-    const net = fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => null);
-    if (hit) { e.waitUntil(net); return hit; }
-    const r = await net;
-    return r || (req.mode === 'navigate' ? c.match('./') : Response.error());
+    try {
+      const r = await Promise.race([fetch(req, { cache: 'no-cache' }), timeout(3000)]);
+      if (r.ok) c.put(req, r.clone());
+      return r;
+    } catch (err) {
+      return (await c.match(req, { ignoreSearch: true }))
+        || (req.mode === 'navigate' ? c.match('./') : Response.error());
+    }
   }));
 });

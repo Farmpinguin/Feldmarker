@@ -4,7 +4,7 @@
 const CATS = [
   { name: 'Maus', v: '--maus' },
   { name: 'Unkraut', v: '--unkraut' },
-  { name: 'Sonstiges', v: '--sonst' }
+  { name: 'Grenzstein', v: '--sonst' }
 ];
 const MAX_ACC = 10;      // m – schlechter: Punkt wird abgelehnt
 const GOOD_ACC = 3;      // m – bis hier grün
@@ -240,7 +240,7 @@ function renderFields() {
     const li = document.createElement('li');
     li.innerHTML = `
       <div class="fhead"><b></b><span class="badge ${f.exported ? 'ok' : ''}">${f.exported ? 'exportiert' : 'nicht exportiert'}</span></div>
-      <div class="t">${datum} · ${hm(f.start)}–${hm(f.ende)} · Maus ${n(0)} · Unkraut ${n(1)} · Sonstiges ${n(2)}</div>
+      <div class="t">${datum} · ${hm(f.start)}–${hm(f.ende)} · Maus ${n(0)} · Unkraut ${n(1)} · Grenzstein ${n(2)}</div>
       <div class="factions">
         <button class="sec primary" data-a="share">Exportieren</button>
         <button class="sec" data-a="view">Karte</button>
@@ -502,7 +502,7 @@ $('close').addEventListener('click', () => {
   const list = todays();
   if (!list.length) { toast('Im aktuellen Feld sind noch keine Punkte'); return; }
   const n = c => list.filter(p => p.cat === c).length;
-  $('closeSum').textContent = `Maus ${n(0)} · Unkraut ${n(1)} · Sonstiges ${n(2)}`;
+  $('closeSum').textContent = `Maus ${n(0)} · Unkraut ${n(1)} · Grenzstein ${n(2)}`;
   $('fieldName').value = '';
   $('closePanel').hidden = false;
   $('closePanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
