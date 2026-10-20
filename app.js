@@ -65,6 +65,53 @@ else if (dayOf(session.start) !== today()) {
   closeSession('');
 }
 
+// ------------------------------------------------------------ Sprachausgabe
+const LS_VOICE = 'fmh_voice';
+let voiceOn = load(LS_VOICE, true);
+let deVoice = null;
+function pickVoice() {
+  try {
+    const vs = speechSynthesis.getVoices();
+    deVoice = vs.find(v => v.lang === 'de-DE' && v.localService) || vs.find(v => v.lang && v.lang.startsWith('de')) || null;
+  } catch (e) {}
+}
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+// urgent: laufende Ansage abbrechen (für Punkt-Bestätigungen, damit nichts hinterherhinkt)
+function say(text, urgent) {
+  if (!voiceOn || !('speechSynthesis' in window)) return;
+  try {
+    if (urgent) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'de-DE'; u.rate = 1.1; u.volume = 1;
+    if (deVoice) u.voice = deVoice;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function renderVoice() {
+  const b = $('voice');
+  b.textContent = voiceOn ? 'Sprache an' : 'Sprache aus';
+  b.classList.toggle('primary', voiceOn);
+}
+
+// GPS-Wechsel erst ansagen, wenn der neue Zustand 3 s stabil ist (kein Geplapper beim Wackeln)
+const GPS_WORDS = { GUT: 'GPS gut', MITTEL: 'GPS mittel', SCHLECHT: 'GPS schlecht', KEIN: 'Kein GPS' };
+let gpsSaid = null, gpsCand = null, gpsCandSince = 0;
+function gpsVoiceTick() {
+  const t = quality().t;
+  if (gpsSaid === null) {                       // erster Fix: einmal ansagen, sobald es GPS gibt
+    if (t !== 'KEIN') { gpsSaid = t; say(GPS_WORDS[t] + (t === 'SCHLECHT' ? '' : ', bereit')); }
+    return;
+  }
+  if (t === gpsSaid) { gpsCand = null; return; }
+  if (t !== gpsCand) { gpsCand = t; gpsCandSince = Date.now(); return; }
+  if (Date.now() - gpsCandSince >= 3000) {
+    gpsSaid = t; gpsCand = null;
+    say(GPS_WORDS[t]);
+  }
+}
+
 // ------------------------------------------------------------ GPS
 if (!window.isSecureContext) $('https').hidden = false;
 
@@ -119,6 +166,7 @@ function addPoint(cat) {
   if (!q.ok) {
     buzz([500, 150, 500]);                 // langes Doppel-Brummen = nicht gesetzt
     toast(q.why);
+    say(q.t === 'KEIN' ? 'Kein GPS. Nicht markiert' : 'GPS zu ungenau. Nicht markiert', true);
     return { ok: false, short: q.t === 'KEIN' ? 'KEIN GPS' : 'GPS SCHLECHT' };
   }
   const p = { uid: uid(), sid: session.sid, cat, lat: fix.lat, lon: fix.lon, acc: Math.round(fix.acc * 10) / 10, t: Date.now() };
@@ -129,6 +177,7 @@ function addPoint(cat) {
   b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
   buzz(cat === 0 ? 120 : cat === 1 ? [90, 90, 90] : [90, 90, 90, 90, 90]);
   toast(`${CATS[cat].name} gesetzt (± ${fmt(p.acc, 1)} m)`);
+  say(`${CATS[cat].name} markiert`, true);
   renderPoints();
   return { ok: true };
 }
@@ -136,11 +185,12 @@ function addPoint(cat) {
 function undo() {
   const list = todays();
   const p = list[list.length - 1];
-  if (!p) { toast('Keine Punkte zum Löschen'); return false; }
+  if (!p) { toast('Keine Punkte zum Löschen'); say('Keine Punkte zum Löschen', true); return false; }
   points = points.filter(x => x.uid !== p.uid);
   save(LS_PTS, points);
   buzz(400);
   toast(`${CATS[p.cat].name}-Punkt gelöscht`);
+  say(`${CATS[p.cat].name} gelöscht`, true);
   renderPoints();
   return true;
 }
@@ -396,6 +446,7 @@ async function bleConnect(dev) {
   });
   await btn.startNotifications();
   setBle('ok', 'Drücker verbunden');
+  say('Drücker verbunden');
   lastStatus = '';
   bleStatusTick();
 }
@@ -405,6 +456,7 @@ async function onBleLost() {
   if (bleBusy) return;
   bleBusy = true;
   setBle('wait', 'Drücker getrennt – verbinde neu…');
+  say('Drücker getrennt');
   buzz([200, 100, 200, 100, 200]);
   for (let i = 0; i < 120 && bleDev && !bleDev.gatt.connected; i++) {
     try { await bleConnect(bleDev); bleBusy = false; return; }
@@ -466,6 +518,7 @@ function finishField(andExport) {
   lastStatus = '';
   viewSid = null;
   renderPoints();
+  if (f) say(`Feld ${name} abgeschlossen. Neues Feld beginnt`.replace('  ', ' '));
   if (f && andExport) exportField(f);
   else toast(`${name ? '„' + name + '“' : 'Feld'} abgeschlossen – neues Feld läuft`);
 }
@@ -498,6 +551,16 @@ async function keepAwake() {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
 keepAwake();
 setInterval(renderGps, 1000);
+setInterval(gpsVoiceTick, 1000);
+
+$('voice').addEventListener('click', () => {
+  voiceOn = !voiceOn;
+  save(LS_VOICE, voiceOn);
+  renderVoice();
+  if (voiceOn) say('Sprachausgabe an', true);
+  else try { speechSynthesis.cancel(); } catch (e) {}
+});
+renderVoice();
 
 if ('serviceWorker' in navigator && window.isSecureContext) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -1,6 +1,6 @@
 // Feldmarker (nur Handy) – Service Worker: App läuft nach dem ersten Öffnen komplett offline.
 // Bei einer neuen Version die Nummer erhöhen.
-const CACHE = 'feldmarker-handy-v1';
+const CACHE = 'feldmarker-handy-v2';
 const FILES = [
   './', 'index.html', 'style.css', 'app.js', 'export.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
