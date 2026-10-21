@@ -12,7 +12,7 @@
     { name: 'FELD', type: 'C', len: 60, get: p => p.feld },
     { name: 'KATEGORIE', type: 'C', len: 12, get: p => p.kategorie },
     { name: 'KAT_NR', type: 'N', len: 2, dec: 0, get: p => p.cat },
-    { name: 'GENAU_M', type: 'N', len: 6, dec: 1, get: p => p.acc },
+    { name: 'GENAU_M', type: 'N', len: 7, dec: 3, get: p => p.acc },
     { name: 'ZEIT', type: 'C', len: 19, get: p => p.zeit },
     { name: 'TAG', type: 'C', len: 10, get: p => p.tag },
     { name: 'LAT', type: 'N', len: 12, dec: 7, get: p => p.lat },
@@ -157,7 +157,7 @@
   }
   function enrich(pts, feldName) {
     return pts.map(p => ({ ...p, feld: feldName || '', kategorie: KAT[p.cat], zeit: lokal(p.t), tag: lokal(p.t).slice(0, 10),
-      acc: p.acc == null ? null : Math.round(p.acc * 10) / 10 }));
+      acc: p.acc == null ? null : Math.round(p.acc * 1000) / 1000 }));
   }
 
   function shapefileZip(pts, feldName, base) {
@@ -176,7 +176,7 @@
     const z = v => String(v).replace('.', ',');
     const lines = [['id', 'feld', 'kategorie', 'lat', 'lon', 'genauigkeit_m', 'zeit', 'tag'].join(';')];
     enrich(pts, feldName).forEach(p => lines.push([p.uid, (p.feld || '').replace(/;/g, ','), p.kategorie, z(p.lat.toFixed(7)), z(p.lon.toFixed(7)),
-      p.acc == null ? '' : z(p.acc.toFixed(1)), p.zeit, p.tag].join(';')));
+      p.acc == null ? '' : z(p.acc.toFixed(3)), p.zeit, p.tag].join(';')));
     return enc.encode('﻿' + lines.join('\r\n') + '\r\n');
   }
 

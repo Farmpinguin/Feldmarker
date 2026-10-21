@@ -1,7 +1,7 @@
 // Feldmarker (nur Handy) – Service Worker
 // Mit Netz: immer die neueste Version von GitHub holen (am Browser-Cache vorbei).
 // Ohne Netz: aus dem eigenen Speicher – die App läuft dann komplett offline.
-const CACHE = 'feldmarker-handy-v4';
+const CACHE = 'feldmarker-handy-v5';
 const FILES = [
   './', 'index.html', 'style.css', 'app.js', 'export.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'
 ];

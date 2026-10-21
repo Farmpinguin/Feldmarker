@@ -8,12 +8,15 @@ const CATS = [
 ];
 const MAX_ACC = 10;      // m – schlechter: Punkt wird abgelehnt
 const GOOD_ACC = 3;      // m – bis hier grün
+const RTK_ACC = 0.10;    // m – bis hier gilt es als RTK (blau)
 const MAX_AGE = 5000;    // ms – älterer GPS-Fix gilt als veraltet
 const LS_PTS = 'fmh_points', LS_FIELDS = 'fmh_fields', LS_SES = 'fmh_session';
 
 const $ = id => document.getElementById(id);
 const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const fmt = (n, d) => n.toFixed(d).replace('.', ',');
+// Genauigkeit lesbar: unter 1 m in Zentimetern, sonst in Metern
+const fmtAcc = a => a == null ? '–' : a < 1 ? `${Math.max(1, Math.round(a * 100))} cm` : `${fmt(a, 1)} m`;
 const dayOf = t => new Date(t).toLocaleDateString('sv-SE');   // JJJJ-MM-TT in Ortszeit
 const today = () => dayOf(Date.now());
 const hm = t => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -96,7 +99,7 @@ function renderVoice() {
 }
 
 // GPS-Wechsel erst ansagen, wenn der neue Zustand 3 s stabil ist (kein Geplapper beim Wackeln)
-const GPS_WORDS = { GUT: 'GPS gut', MITTEL: 'GPS mittel', SCHLECHT: 'GPS schlecht', KEIN: 'Kein GPS' };
+const GPS_WORDS = { RTK: 'RTK', GUT: 'GPS gut', MITTEL: 'GPS mittel', SCHLECHT: 'GPS schlecht', KEIN: 'Kein GPS' };
 let gpsSaid = null, gpsCand = null, gpsCandSince = 0;
 function gpsVoiceTick() {
   const t = quality().t;
@@ -107,8 +110,9 @@ function gpsVoiceTick() {
   if (t === gpsSaid) { gpsCand = null; return; }
   if (t !== gpsCand) { gpsCand = t; gpsCandSince = Date.now(); return; }
   if (Date.now() - gpsCandSince >= 3000) {
+    const gpsSaidPrev = gpsSaid;
     gpsSaid = t; gpsCand = null;
-    say(GPS_WORDS[t]);
+    say((gpsSaidPrev === 'RTK' ? 'RTK verloren. ' : '') + GPS_WORDS[t]);
   }
 }
 
@@ -135,6 +139,7 @@ if ('geolocation' in navigator) {
 
 function quality() {
   if (!fix || Date.now() - fix.t > MAX_AGE) return { t: 'KEIN', c: '--bad', ok: false, why: 'Kein aktuelles GPS' };
+  if (fix.acc <= RTK_ACC) return { t: 'RTK', c: '--rtk', ok: true };
   if (fix.acc <= GOOD_ACC) return { t: 'GUT', c: '--ok', ok: true };
   if (fix.acc <= MAX_ACC) return { t: 'MITTEL', c: '--warn', ok: true };
   return { t: 'SCHLECHT', c: '--bad', ok: false, why: 'GPS zu ungenau – kurz stehen bleiben' };
@@ -145,7 +150,9 @@ function renderGps() {
   $('lamp').textContent = q.t;
   $('lamp').style.background = `var(${q.c})`;
   if (fix) {
-    $('acc').innerHTML = `± ${fmt(fix.acc, 1)} <small>m Genauigkeit</small>`;
+    $('acc').innerHTML = fix.acc < 1
+      ? `± ${Math.max(1, Math.round(fix.acc * 100))} <small>cm Genauigkeit</small>`
+      : `± ${fmt(fix.acc, 1)} <small>m Genauigkeit</small>`;
     $('coord').textContent = `${fix.lat.toFixed(6)}° N · ${fix.lon.toFixed(6)}° O`;
     const s = Math.round((Date.now() - fix.t) / 1000);
     $('age').textContent = s <= 1 ? 'gerade eben' : `vor ${s} s`;
@@ -169,14 +176,14 @@ function addPoint(cat) {
     say(q.t === 'KEIN' ? 'Kein GPS. Nicht markiert' : 'GPS zu ungenau. Nicht markiert', true);
     return { ok: false, short: q.t === 'KEIN' ? 'KEIN GPS' : 'GPS SCHLECHT' };
   }
-  const p = { uid: uid(), sid: session.sid, cat, lat: fix.lat, lon: fix.lon, acc: Math.round(fix.acc * 10) / 10, t: Date.now() };
+  const p = { uid: uid(), sid: session.sid, cat, lat: fix.lat, lon: fix.lon, acc: Math.round(fix.acc * 1000) / 1000, t: Date.now() };
   points.push(p);
   save(LS_PTS, points);
   viewSid = null;
   const b = $('b' + (cat + 1));
   b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
   buzz(cat === 0 ? 120 : cat === 1 ? [90, 90, 90] : [90, 90, 90, 90, 90]);
-  toast(`${CATS[cat].name} gesetzt (± ${fmt(p.acc, 1)} m)`);
+  toast(`${CATS[cat].name} gesetzt (± ${fmtAcc(p.acc)})`);
   say(`${CATS[cat].name} markiert`, true);
   renderPoints();
   return { ok: true };
@@ -206,7 +213,7 @@ function renderPoints() {
   list.slice(-8).reverse().forEach(p => {
     const li = document.createElement('li');
     li.innerHTML = `<span class="sw" style="background:var(${CATS[p.cat].v})"></span>`
-      + `<span>${CATS[p.cat].name} <span class="t">± ${fmt(p.acc, 1)} m</span></span>`
+      + `<span>${CATS[p.cat].name} <span class="t">± ${fmtAcc(p.acc)}</span></span>`
       + `<span class="t">${new Date(p.t).toLocaleTimeString('de-DE')}</span>`;
     ul.appendChild(li);
   });
@@ -400,9 +407,9 @@ function statusString() {
   const q = quality();
   const list = todays();
   const n = c => list.filter(p => p.cat === c).length;
-  const acc10 = fix && q.t !== 'KEIN' ? Math.round(fix.acc * 10) : -1;
-  const qc = { GUT: 'G', MITTEL: 'M', SCHLECHT: 'S', KEIN: 'K' }[q.t];
-  return `S${acc10};${qc};${n(0)};${n(1)};${n(2)};0`;
+  const accCm = fix && q.t !== 'KEIN' ? Math.min(99999, Math.max(1, Math.round(fix.acc * 100))) : -1;
+  const qc = { RTK: 'R', GUT: 'G', MITTEL: 'M', SCHLECHT: 'S', KEIN: 'K' }[q.t];
+  return `S${accCm};${qc};${n(0)};${n(1)};${n(2)};0`;
 }
 
 function bleStatusTick() {
